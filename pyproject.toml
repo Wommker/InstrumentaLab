@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "instrumentalab"
+version = "0.1.0"
+description = "Núcleo lógico de instrumentación orientado a lazos de control"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = ["src"]
