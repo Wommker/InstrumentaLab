@@ -3,58 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>InstrumentaLab · Diagrama de lazos</title>
-  <link rel="stylesheet" href="./styles.css">
-  <link rel="stylesheet" href="./redesign.css">
+  <meta name="theme-color" content="#102a3a">
+  <title>InstrumentaLab · Verificación en campo</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="#" aria-label="InstrumentaLab inicio"><span class="brand-mark">I</span><span>Instrumenta<span class="brand-light">Lab</span><small>DIAGRAMADOR DE INSTRUMENTACIÓN</small></span></a>
-    <div class="project-name"><span class="live-dot"></span><span id="save-state">Guardado local</span><span class="separator">/</span><strong>Diagrama sin título</strong></div>
-    <div class="top-actions">
-      <button class="button quiet theme-toggle" id="theme-toggle" type="button" aria-label="Activar modo oscuro" title="Cambiar tema">◐</button>
-      <button class="button quiet" id="export-button" title="Descargar copia del diagrama">Exportar</button>
-      <button class="button quiet" id="import-button">Importar</button>
-      <button class="button primary" id="save-button"><span>✓</span> Guardado</button>
-      <input id="import-file" type="file" accept="application/json" hidden>
-    </div>
+  <header class="app-header">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">I<span>·</span>L</span><span><strong>InstrumentaLab</strong><small>Verificación de variables críticas</small></span></div>
+    <nav class="mode-tabs" aria-label="Modo de trabajo">
+      <button type="button" data-action="mode-field" id="tab-field">◉ <span>Campo</span></button>
+      <button type="button" data-action="mode-creator" id="tab-creator">✎ <span>Creador</span></button>
+    </nav>
+    <span class="local-badge">● Local</span>
   </header>
-
-  <main class="app-shell">
-    <aside class="sidebar">
-      <div class="sidebar-heading"><div><span class="eyebrow">PROYECTO LOCAL</span><h1>Lazos de control</h1></div></div>
-      <div class="side-section"><div class="section-label">DIAGRAMA</div><div class="side-item active"><span class="side-icon diagram-icon">↺</span> Lazo principal <span class="item-count" id="node-count">5</span></div></div>
-      <div class="side-section library-section"><div class="section-label">BIBLIOTECA DE OBJETOS</div>
-        <button class="library-item" data-create="process"><span class="library-icon process-icon">▤</span><span><b>Tanque / tubería</b><small>Objeto con variables propias</small></span><span class="add-mark">+</span></button>
-        <button class="library-item" data-create="variable"><span class="library-icon variable-icon">PV</span><span><b>Lectura de variable</b><small>Sale del objeto</small></span><span class="add-mark">+</span></button>
-        <button class="library-item" data-create="instrument"><span class="library-icon instrument-icon">PT</span><span><b>Sensor / transmisor</b><small>Mide una magnitud</small></span><span class="add-mark">+</span></button>
-        <button class="library-item" data-create="controller"><span class="library-icon controller-icon">⌁</span><span><b>Controlador</b><small>Tarjeta de equipo</small></span><span class="add-mark">+</span></button>
-        <button class="library-item" data-create="final"><span class="library-icon final-icon">⌖</span><span><b>Elemento final</b><small>Acción sobre el proceso</small></span><span class="add-mark">+</span></button>
-      </div>
-      <div class="section-label examples-label">LAZOS DE EJEMPLO</div>
-      <button id="add-pressure-example" class="button scenario-example">↺ Descarga por presión</button>
-      <button id="add-inlet-example" class="button scenario-example">↺ Cierre de alimentación</button>
-      <div class="sidebar-bottom"><div class="local-badge"><span>●</span><div><b>Proyecto local</b><small>Los datos quedan en este navegador</small></div></div><button id="clear-board" class="text-button">Crear un diagrama nuevo</button></div>
-    </aside>
-
-    <section class="workspace">
-      <div class="workspace-bar"><div class="breadcrumb"><span>Diagramas</span><span class="crumb-sep">/</span><strong>Lazo principal</strong><span class="draft-pill">BORRADOR</span></div><div class="canvas-actions"><button id="zoom-out" class="icon-button" title="Alejar">−</button><span id="zoom-label">100%</span><button id="zoom-in" class="icon-button" title="Acercar">+</button><span class="toolbar-divider"></span><button id="fit-canvas" class="button quiet small">Ajustar vista</button><span class="toolbar-divider"></span><button id="reset-scenario" class="button quiet small" title="Reiniciar tendencias de variables">↺ Reiniciar</button><button id="simulate" class="button simulate"><span>▶</span> Iniciar simulación</button></div></div>
-      <div class="canvas-viewport" id="viewport">
-        <div class="canvas" id="canvas">
-          <svg class="connections" id="connections" aria-label="Conexiones entre tarjetas"></svg>
-          <div class="canvas-hint" id="canvas-hint"><span>＋</span><b>Crea un lazo de control</b><small>Conecta arrastrando entre puntos de cualquier lado.</small></div>
-        </div>
-      </div>
-      <footer class="statusbar"><span><i class="status-led"></i><span id="status-message">Diagrama listo</span></span><span id="connection-count">0 conexiones</span><span class="status-right">100% local <span class="lock-icon">▣</span></span></footer>
-    </section>
-
-    <aside class="inspector" id="inspector">
-      <div class="inspector-empty"><div class="inspector-art">↺</div><h2>Selecciona una tarjeta</h2><div class="inspector-flow"><span>▤ Objeto</span><b>→</b><span>PV Variable</span><b>→</b><span>PT Instrumento</span><b>→</b><span>◇ Control</span><b>→</b><span>⌖ Válvula</span></div></div>
-    </aside>
-  </main>
-  <div class="toast" id="toast" role="status"></div>
-  <dialog id="connection-dialog" class="connection-dialog"><form method="dialog"><div class="dialog-mark">↗</div><h2>Crear conexión</h2><p id="connection-route">Origen → destino</p><div id="connection-variable-group" hidden><label for="connection-variable">Variable del objeto</label><select id="connection-variable"></select></div><label for="connection-medium">Medio de conexión</label><select id="connection-medium"><option value="electrical">Eléctrica</option><option value="hydraulic">Hidráulica</option><option value="pneumatic">Neumática</option><option value="mechanical">Mecánica</option><option value="wireless">Inalámbrica</option></select><div class="dialog-actions"><button class="button quiet" value="cancel">Cancelar</button><button class="button primary" id="confirm-connection" value="connect">Conectar</button></div></form></dialog>
-  <script src="./simulation.js" defer></script>
-  <script src="./app.js" defer></script>
+  <main id="app"></main>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="diagnostics.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
