@@ -90,7 +90,7 @@
       const units=D.TYPE_UNITS[variable.type].filter(candidate=>D.UnitConverter.compatible(candidate,variable.unit));
       const status=result?.results.find(entry=>entry.variableId===variable.id);
       return '<article class="square-tile instrument-tile'+(status?' '+status.status:'')+'" data-variable="'+escape(variable.id)+'">'+
-        '<span class="tile-index">'+String(index+1).padStart(2,'0')+'</span><strong>'+escape(variable.tag)+'</strong><small>'+escape(variable.name)+
+        '<span class="tile-index">'+String(index+1).padStart(2,'0')+'</span><strong>'+escape(variable.tag)+'</strong><small title="'+escape(variable.name)+'">'+escape(variable.name)+
         '</small><div class="instrument-reading"><input aria-label="Valor observado '+escape(variable.tag)+'" type="text" inputmode="decimal" enterkeyhint="decimal" data-read="value" value="'+escape(value)+'" placeholder="Valor">'+
         '<select aria-label="Unidad '+escape(variable.tag)+'" data-read="unit">'+choices(units,unit)+'</select></div>'+
         '<span class="tile-reading'+(status?' '+status.status:'')+'">'+(status?this.findingLabel(status,variable,record):'')+'</span></article>';
@@ -170,6 +170,13 @@
         }).join('')+
         (creator?'<button class="system-tab add-system" data-action="add-system">＋ <span>Agregar sistema</span></button>':'')+
         '</div>';
+    }
+    systemSelector(equipment){
+      const options=equipment.systems.length?equipment.systems.map(item=>'<option value="'+escape(item.id)+'"'+
+        (item.id===this.systemId?' selected':'')+'>'+escape(item.name||'Sistema sin nombre')+' · '+item.variables.length+' variables</option>').join(''):
+        '<option value="">Sin sistemas</option>';
+      return '<div class="creator-systems-nav"><label class="system-picker"><span class="column-title">Sistema</span><select id="creator-system-select"'+
+        (equipment.systems.length?'':' disabled')+'>'+options+'</select></label><button class="button secondary system-add-button" data-action="add-system">＋ Agregar sistema</button></div>';
     }
     reference(variable){
       let limits='';
@@ -290,7 +297,7 @@
         '<button class="button primary" data-action="creator-next">Siguiente ›</button></div></section></div>';
       return '<div class="creator-page creator-systems"><div class="creator-screen-nav"><button class="button secondary" data-action="creator-home">‹ Equipos</button>'+
         '<span>'+escape(equipment.tag||'Equipo')+' · '+escape(equipment.name||'')+'</span><button class="button secondary" data-action="creator-equipment">‹ Identificación</button></div>'+
-        '<div class="creator-systems-nav"><div class="column-title">Sistemas</div>'+this.systems(equipment,true)+'</div>'+
+        this.systemSelector(equipment)+
         '<div class="creator-columns"><section class="creator-column system-editor-column"><div class="column-title">Sistema seleccionado</div>'+this.systemEditor(system)+
         '</section><section class="creator-column"><div class="column-title">Variables</div>'+(system?
           '<div class="variable-list-heading"><strong>'+escape(system.name)+'</strong><button class="button secondary" data-action="add-variable">＋</button></div>'+
@@ -481,10 +488,7 @@
         this.persist();this.render();this.notify('Equipo eliminado');return;
       }
       if(action==='add-system'){
-        const name=prompt('Nombre del sistema crítico:');
-        if(name===null)return;
-        if(!name.trim()){this.notify('Escribe un nombre de sistema');return;}
-        const item=new D.CriticalSystem({name:name.trim()});
+        const item=new D.CriticalSystem({name:'Sistema nuevo'});
         equipment.systems.push(item);this.systemId=item.id;this.creatorVariableId=null;this.invalidate(equipment);this.render();return;
       }
       if(action==='delete-system'){
@@ -520,6 +524,9 @@
     click(event){const button=event.target.closest('[data-action]');if(button)this.action(button);}
     change(event){
       const target=event.target;
+      if(target.id==='creator-system-select'){
+        this.systemId=target.value||null;this.creatorVariableId=null;this.persist();this.render();return;
+      }
       if(target.id==='equipment-select'){
         this.equipmentId=target.value;this.systemId=null;this.fieldView='home';this.variableId=null;this.drafts={};
         this.persist();this.render();return;

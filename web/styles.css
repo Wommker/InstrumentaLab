@@ -442,13 +442,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .instrument-tile.alarm .tile-reading{color:#963b35}
 
 /* Creator navigation and field system tiles. */
-.creator-systems-nav{flex:none;margin:0 0 8px;padding:0 2px 8px;border-bottom:1px solid #dbe5e5}
-.creator-systems-nav>.column-title{margin:0 0 5px}
-.creator-systems-nav .system-nav{display:grid;flex-direction:initial;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0;border:0}
-.creator-systems-nav .system-card-editor{display:block}
-.creator-systems-nav .system-tab{width:100%;min-height:58px;padding:7px 10px;font-size:clamp(13px,.95vw,16px)}
-.creator-systems-nav .system-tab small{font-size:clamp(11px,.8vw,13px)}
-.creator-systems-nav .add-system{min-height:58px;justify-content:center}
+.creator-systems-nav{display:flex;align-items:end;gap:10px;flex:none;margin:0 0 8px;padding:0 2px 8px;border-bottom:1px solid #dbe5e5}
+.creator-systems-nav .system-picker{display:grid;flex:1;gap:5px;min-width:0}
+.creator-systems-nav .system-picker>.column-title{margin:0}
+.creator-systems-nav select{width:100%;min-height:58px;padding:8px 14px;border:1px solid #b8cbd0;border-radius:5px;background:#fff;color:#183644;font-size:clamp(16px,1.15vw,20px);font-weight:750}
+.creator-systems-nav .system-add-button{min-height:58px;padding:9px 18px;white-space:nowrap;font-size:clamp(15px,1vw,18px)}
 .system-editor-column{display:flex;flex-direction:column;gap:10px}
 .system-editor-column .field input{min-height:44px}
 .system-editor-column .system-delete{margin-top:auto;align-self:flex-start}
@@ -462,14 +460,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .system-tiles .tile-index{font-size:clamp(12px,.9vw,15px)}
 .field-shell:has(.system-tiles) .screen-title h1{font-size:clamp(25px,2.2vw,34px)}
 .instrument-tiles .instrument-tile{height:clamp(215px,26vh,265px);min-height:0;aspect-ratio:auto;box-sizing:border-box}
+.instrument-tile>small{display:block;flex:1 1 auto;min-height:2.8em;max-height:7em;overflow-y:auto;-webkit-line-clamp:unset;-webkit-box-orient:initial;touch-action:pan-y}
 .instrument-tile .tile-reading{flex:0 0 4.4em;min-height:4.4em;max-height:4.4em;overflow:auto;line-height:1.15}
 .instrument-reading input,.instrument-reading select{min-height:46px}
 @media(max-width:850px){
-  .creator-systems-nav .system-nav{grid-template-columns:repeat(4,minmax(0,1fr))}
   .creator-home .equipment-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 @media(max-width:680px){
   .system-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .creator-systems-nav .system-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .creator-systems-nav{align-items:stretch;gap:7px}
+  .creator-systems-nav .system-picker{flex:1;min-width:0}
+  .creator-systems-nav .system-add-button{padding-inline:12px}
   .creator-home .equipment-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
