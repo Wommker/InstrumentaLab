@@ -27,6 +27,10 @@
   const makeId = () => globalThis.crypto?.randomUUID?.() || `id-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   class UnitConverter {
+    static parseReading(value) {
+      const text=String(value).trim();
+      return /^[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(text)?Number(text.replace(',','.')):null;
+    }
     static compatible(from,to) {
       return Boolean(UNIT_DEFINITIONS[from]&&UNIT_DEFINITIONS[to]&&UNIT_DEFINITIONS[from].dimension===UNIT_DEFINITIONS[to].dimension);
     }
@@ -51,37 +55,42 @@
       this.unit=TYPE_UNITS[this.type].includes(data.unit)?data.unit:TYPE_UNITS[this.type][0];
       this.rule=['range','minimum','maximum'].includes(data.rule)?data.rule:'range';
       for(const key of ['normal','min','max','alarmMin','alarmMax'])this[key]=finite(data[key])?Number(data[key]):null;
+      this.maxDeviationPercent=finite(data.maxDeviationPercent)?Number(data.maxDeviationPercent):10;
     }
     validate() {
       const errors=[];
+      if(!finite(this.maxDeviationPercent)||this.maxDeviationPercent<0||this.maxDeviationPercent>100)errors.push(`${this.tag||'Variable'}: la desviación máxima debe estar entre 0 y 100%`);
       if(!this.tag.trim())errors.push('Etiqueta de variable vacía');
       if(!this.name.trim())errors.push(`${this.tag||'Variable'}: nombre vacío`);
       if(!finite(this.normal))errors.push(`${this.tag}: falta el valor normal`);
       if(this.rule==='minimum'||this.rule==='range'){
         if(!finite(this.min)||!finite(this.alarmMin))errors.push(`${this.tag}: faltan mínimo y alarma baja`);
-        else if(Number(this.alarmMin)>Number(this.min))errors.push(`${this.tag}: la alarma baja debe ser menor o igual al mínimo`);
+        else if(Number(this.alarmMin)>=Number(this.min))errors.push(`${this.tag}: la alarma baja debe ser menor que el mínimo`);
         if(finite(this.normal)&&finite(this.min)&&Number(this.normal)<Number(this.min))errors.push(`${this.tag}: el valor normal está bajo el mínimo`);
       }
       if(this.rule==='maximum'||this.rule==='range'){
         if(!finite(this.max)||!finite(this.alarmMax))errors.push(`${this.tag}: faltan máximo y alarma alta`);
-        else if(Number(this.alarmMax)<Number(this.max))errors.push(`${this.tag}: la alarma alta debe ser mayor o igual al máximo`);
+        else if(Number(this.alarmMax)<=Number(this.max))errors.push(`${this.tag}: la alarma alta debe ser mayor que el máximo`);
         if(finite(this.normal)&&finite(this.max)&&Number(this.normal)>Number(this.max))errors.push(`${this.tag}: el valor normal supera el máximo`);
       }
       if(this.rule==='range'&&finite(this.min)&&finite(this.max)&&Number(this.min)>Number(this.max))errors.push(`${this.tag}: mínimo mayor que máximo`);
       return errors;
     }
-    assess(observed,unit=this.unit) {
+    assess(observed,unit=this.unit,maxDeviationPercent=10) {
       const value=UnitConverter.convert(observed,unit,this.unit);
       if(value===null)throw new Error(`${this.tag}: lectura o unidad no válida`);
       if(this.validate().length)throw new Error(`${this.tag}: referencia incompleta`);
       let status='normal';
-      if((this.rule!=='maximum'&&value<Number(this.alarmMin))||(this.rule!=='minimum'&&value>Number(this.alarmMax)))status='alarm';
+      if((this.rule!=='maximum'&&value<=Number(this.alarmMin))||(this.rule!=='minimum'&&value>=Number(this.alarmMax)))status='alarm';
       else if((this.rule!=='maximum'&&value<Number(this.min))||(this.rule!=='minimum'&&value>Number(this.max)))status='warning';
       const difference=value-Number(this.normal);
+      const percentDifference=Number(this.normal)===0?null:difference/Math.abs(Number(this.normal))*100;
+      // En una regla de rango, los límites explícitos definen el intervalo ideal; la desviación del valor central no debe marcarlo como advertencia dentro de ese intervalo.
+      if(status==='normal'&&this.rule!=='range'&&percentDifference!==null&&Math.abs(percentDifference)>Number(maxDeviationPercent))status='warning';
       return {
         variableId:this.id,tag:this.tag,name:this.name,type:this.type,unit:this.unit,
         observed:value,normal:Number(this.normal),difference,
-        percentDifference:Number(this.normal)===0?null:difference/Math.abs(Number(this.normal))*100,
+        percentDifference,maxDeviationPercent:Number(maxDeviationPercent),
         status,rule:this.rule,min:this.min,max:this.max,alarmMin:this.alarmMin,alarmMax:this.alarmMax
       };
     }
@@ -93,6 +102,8 @@
       this.id=data.id||makeId();
       this.name=String(data.name||'');
       this.description=String(data.description||'');
+      const nameKey=String(data.name||'').toLowerCase();
+      this.icon=String(data.icon||(nameKey.includes('lubric')?'oil':nameKey.includes('sello')?'seal':'process'));
       this.variables=(Array.isArray(data.variables)?data.variables:[]).map(item=>new VariableSpec(item));
     }
     validate() {
@@ -110,13 +121,19 @@
       this.id=data.id||makeId();
       this.tag=String(data.tag||'');
       this.unit=String(data.unit||'');
+      this.unitNumber=String(data.unitNumber||'');
       this.service=String(data.service||'');
       this.name=String(data.name||'');
       this.description=String(data.description||'');
+      this.icon=String(data.icon||'compressor');
+      this.maxDeviationPercent=finite(data.maxDeviationPercent)?Number(data.maxDeviationPercent):10;
       this.approved=Boolean(data.approved);
       this.approvedAt=data.approvedAt||null;
       this.provisional=Boolean(data.provisional);
       this.systems=(Array.isArray(data.systems)?data.systems:[]).map(item=>new CriticalSystem(item));
+      for(let si=0;si<this.systems.length;si++)for(let vi=0;vi<this.systems[si].variables.length;vi++){
+        if(!finite(data.systems?.[si]?.variables?.[vi]?.maxDeviationPercent))this.systems[si].variables[vi].maxDeviationPercent=this.maxDeviationPercent;
+      }
     }
     validate() {
       const errors=[];
@@ -148,30 +165,30 @@
       const system=item.systems.find(entry=>entry.id===systemId);
       if(!system)throw new Error('Sistema no encontrado');
       const missing=system.variables.filter(variable=>!records[variable.id]||!finite(records[variable.id].value));
-      if(missing.length)throw new Error(`Faltan ${missing.length} lectura(s) registradas`);
-      const results=system.variables.map(variable=>variable.assess(records[variable.id].value,records[variable.id].unit));
+      if(missing.length)throw new Error(`Faltan ${missing.length} lecturas para ${system.name}`);
+      const results=system.variables.filter(variable=>!missing.includes(variable)).map(variable=>variable.assess(records[variable.id].value,records[variable.id].unit,variable.maxDeviationPercent));
       const counts={normal:0,warning:0,alarm:0};
       for(const result of results)counts[result.status]++;
-      const status=results.reduce((current,result)=>SEVERITY[result.status]>SEVERITY[current]?result.status:current,'normal');
-      return {equipmentId:item.id,systemId,systemName:system.name,status,counts,results,evaluatedAt:new Date().toISOString()};
+      const status=results.length?results.reduce((current,result)=>SEVERITY[result.status]>SEVERITY[current]?result.status:current,'normal'):'pending';
+      return {equipmentId:item.id,systemId,systemName:system.name,status,counts,results,pending:missing.length,evaluatedAt:new Date().toISOString()};
     }
   }
 
   const variable=(tag,name,type,unit,rule,normal,min,max,alarmMin,alarmMax)=>new VariableSpec({tag,name,type,unit,rule,normal,min,max,alarmMin,alarmMax});
   const compressorSystems=()=>[
-    new CriticalSystem({name:'Sistema de lubricación',description:'Aceite, bombas y sellos',variables:[
+    new CriticalSystem({name:'Sistema de lubricación',description:'Aceite, bombas y sellos',icon:'oil',variables:[
       variable('LI-101','Nivel del tanque de aceite','level','%','range',70,50,85,35,95),
       variable('TI-101','Temperatura de salida de la bomba de aceite','temperature','°C','range',45,30,60,20,75),
       variable('TI-102','Temperatura de entrada al tanque','temperature','°C','range',42,30,55,20,70),
       variable('PI-101','Presión de salida de la bomba de aceite','pressure','psi','minimum',43,35,null,25,null),
       variable('PDI-101','Presión diferencial en los sellos','pressure','psi','minimum',15,10,null,5,null)
     ]}),
-    new CriticalSystem({name:'Variables de proceso',description:'Succión, descarga y depuración',variables:[
+    new CriticalSystem({name:'Variables de proceso',description:'Succión, descarga y depuración',icon:'process',variables:[
       variable('PI-201','Presión de salida final','pressure','psi','range',160,140,180,120,200),
       variable('PI-202','Presión de entrada','pressure','psi','range',40,30,50,20,60),
       variable('LI-201','Nivel del depurador','level','%','maximum',40,null,60,null,80)
     ]}),
-    new CriticalSystem({name:'Sellos secos',description:'Presiones del sistema de sellado',variables:[
+    new CriticalSystem({name:'Sellos secos',description:'Presiones del sistema de sellado',icon:'seal',variables:[
       variable('PI-301','Presión del sistema de sellos','pressure','psi','minimum',65,55,null,45,null),
       variable('PI-302','Presión del tanque de sellos','pressure','psi','range',20,15,25,10,30)
     ]})
